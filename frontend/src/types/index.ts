@@ -12,6 +12,17 @@ export interface Tag {
   postCount: number
 }
 
+export interface Supplement {
+  id: number
+  postId: number
+  seq: number
+  content: string
+  status: number // 1 已发布 2 审核中 3 已驳回
+  hitWords?: string
+  reviewNote?: string
+  createdAt: string
+}
+
 export interface Post {
   id: number
   identityId: number
@@ -26,6 +37,9 @@ export interface Post {
   viewCount: number
   isFeatured: boolean
   liked: boolean
+  isAuthor: boolean
+  supplementCount: number
+  supplements?: Supplement[]
   tags: Tag[]
   createdAt: string
 }
@@ -39,6 +53,7 @@ export interface Comment {
   content: string
   likeCount: number
   liked: boolean
+  isOp: boolean
   createdAt: string
 }
 

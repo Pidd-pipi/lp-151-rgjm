@@ -20,14 +20,15 @@ type ReviewService interface {
 }
 
 type reviewService struct {
-	queue    repository.ReviewQueueRepository
-	posts    repository.PostRepository
-	comments repository.CommentRepository
-	logger   *slog.Logger
+	queue       repository.ReviewQueueRepository
+	posts       repository.PostRepository
+	comments    repository.CommentRepository
+	supplements repository.SupplementRepository
+	logger      *slog.Logger
 }
 
-func NewReviewService(queue repository.ReviewQueueRepository, posts repository.PostRepository, comments repository.CommentRepository, logger *slog.Logger) ReviewService {
-	return &reviewService{queue: queue, posts: posts, comments: comments, logger: logger}
+func NewReviewService(queue repository.ReviewQueueRepository, posts repository.PostRepository, comments repository.CommentRepository, supplements repository.SupplementRepository, logger *slog.Logger) ReviewService {
+	return &reviewService{queue: queue, posts: posts, comments: comments, supplements: supplements, logger: logger}
 }
 
 func (s *reviewService) Enqueue(targetType string, targetID uint, content string, hitWords []string) error {
@@ -56,7 +57,7 @@ func (s *reviewService) Approve(queueID uint, adminID uint, note string) error {
 	if item.Status != constants.ReviewStatusPending {
 		return fmt.Errorf("review item not pending")
 	}
-	if err := s.approveTarget(item.TargetType, item.TargetID); err != nil {
+	if err := s.approveTarget(item.TargetType, item.TargetID, adminID, note); err != nil {
 		return err
 	}
 	item.Status = constants.ReviewStatusApproved
@@ -77,7 +78,7 @@ func (s *reviewService) Reject(queueID uint, adminID uint, note string) error {
 	if item.Status != constants.ReviewStatusPending {
 		return fmt.Errorf("review item not pending")
 	}
-	if err := s.rejectTarget(item.TargetType, item.TargetID); err != nil {
+	if err := s.rejectTarget(item.TargetType, item.TargetID, adminID, note); err != nil {
 		return err
 	}
 	item.Status = constants.ReviewStatusRejected
@@ -90,7 +91,7 @@ func (s *reviewService) Reject(queueID uint, adminID uint, note string) error {
 	return nil
 }
 
-func (s *reviewService) approveTarget(targetType string, targetID uint) error {
+func (s *reviewService) approveTarget(targetType string, targetID uint, adminID uint, note string) error {
 	switch targetType {
 	case "post":
 		post, err := s.posts.FindByID(targetID)
@@ -114,12 +115,14 @@ func (s *reviewService) approveTarget(targetType string, targetID uint) error {
 		comment.Status = constants.CommentStatusPublished
 		comment.UpdatedAt = time.Now()
 		return s.comments.Update(comment)
+	case "supplement":
+		return s.reviewSupplement(targetID, constants.SupplementStatusPublished, adminID, note)
 	default:
 		return fmt.Errorf("unknown target type: %s", targetType)
 	}
 }
 
-func (s *reviewService) rejectTarget(targetType string, targetID uint) error {
+func (s *reviewService) rejectTarget(targetType string, targetID uint, adminID uint, note string) error {
 	switch targetType {
 	case "post":
 		post, err := s.posts.FindByID(targetID)
@@ -143,7 +146,27 @@ func (s *reviewService) rejectTarget(targetType string, targetID uint) error {
 		comment.Status = constants.CommentStatusRejected
 		comment.UpdatedAt = time.Now()
 		return s.comments.Update(comment)
+	case "supplement":
+		return s.reviewSupplement(targetID, constants.SupplementStatusRejected, adminID, note)
 	default:
 		return fmt.Errorf("unknown target type: %s", targetType)
 	}
+}
+
+// reviewSupplement 将追记置为审核结果状态，并把审核人与原因回写到追记上（原因仅作者可见）。
+func (s *reviewService) reviewSupplement(targetID uint, status int, adminID uint, note string) error {
+	supplement, err := s.supplements.FindByID(targetID)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return nil
+		}
+		return err
+	}
+	now := time.Now()
+	supplement.Status = status
+	supplement.ReviewNote = note
+	supplement.ReviewedBy = &adminID
+	supplement.ReviewedAt = &now
+	supplement.UpdatedAt = now
+	return s.supplements.Update(supplement)
 }

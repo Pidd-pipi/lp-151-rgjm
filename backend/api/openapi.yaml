@@ -89,7 +89,7 @@ paths:
           description: 帖子数组
   /api/v1/posts/{id}:
     get:
-      summary: 帖子详情
+      summary: 帖子详情（含楼主追记；楼主本人可见待审/已驳回追记及审核原因）
       parameters:
         - in: path
           name: id
@@ -98,6 +98,29 @@ paths:
       responses:
         '200':
           description: 帖子详情
+  /api/v1/posts/{id}/supplements:
+    post:
+      summary: 楼主追加追记（最多 2 条有效追记，每条不超过 500 字，提交后不可修改；命中敏感词进入审核；同一帖子仅允许一条待审追记，超限或并发冲突整次拒绝）
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string, maxLength: 500 }
+      responses:
+        '200':
+          description: 追记与命中信息（blocked=true 表示已进入审核）
+        '403':
+          description: 非楼主
+        '409':
+          description: 追记已达上限 / 已有待审追记 / 帖子未发布
   /api/v1/posts/{id}/comments:
     get:
       summary: 帖子评论列表

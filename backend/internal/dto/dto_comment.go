@@ -19,5 +19,6 @@ type CommentResponse struct {
 	Content    string `json:"content"`
 	LikeCount  int    `json:"likeCount"`
 	Liked      bool   `json:"liked"`
+	IsOp       bool   `json:"isOp"`
 	CreatedAt  string `json:"createdAt"`
 }

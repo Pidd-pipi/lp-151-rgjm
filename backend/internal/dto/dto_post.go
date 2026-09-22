@@ -15,21 +15,24 @@ type ListPostRequest struct {
 }
 
 type PostResponse struct {
-	ID           uint              `json:"id"`
-	IdentityID   uint              `json:"identityId"`
-	Nickname     string            `json:"nickname"`
-	Avatar       string            `json:"avatar"`
-	Title        string            `json:"title"`
-	Content      string            `json:"content"`
-	Images       []string          `json:"images"`
-	Status       int               `json:"status"`
-	LikeCount    int               `json:"likeCount"`
-	CommentCount int               `json:"commentCount"`
-	ViewCount    int               `json:"viewCount"`
-	IsFeatured   bool              `json:"isFeatured"`
-	Liked        bool              `json:"liked"`
-	Tags         []TagResponse     `json:"tags"`
-	CreatedAt    string            `json:"createdAt"`
+	ID              uint                 `json:"id"`
+	IdentityID      uint                 `json:"identityId"`
+	Nickname        string               `json:"nickname"`
+	Avatar          string               `json:"avatar"`
+	Title           string               `json:"title"`
+	Content         string               `json:"content"`
+	Images          []string             `json:"images"`
+	Status          int                  `json:"status"`
+	LikeCount       int                  `json:"likeCount"`
+	CommentCount    int                  `json:"commentCount"`
+	ViewCount       int                  `json:"viewCount"`
+	IsFeatured      bool                 `json:"isFeatured"`
+	Liked           bool                 `json:"liked"`
+	IsAuthor        bool                 `json:"isAuthor"`
+	SupplementCount int                  `json:"supplementCount"`
+	Supplements     []SupplementResponse `json:"supplements,omitempty"`
+	Tags            []TagResponse        `json:"tags"`
+	CreatedAt       string               `json:"createdAt"`
 }
 
 type PageResult struct {

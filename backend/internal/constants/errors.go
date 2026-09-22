@@ -24,6 +24,17 @@ const (
 	ReviewStatusPending  = 1
 	ReviewStatusApproved = 2
 	ReviewStatusRejected = 3
+
+	SupplementStatusPublished = 1
+	SupplementStatusPending   = 2
+	SupplementStatusRejected  = 3
+)
+
+// 楼主追记限制
+const (
+	SupplementMaxActive  = 2 // 同一帖子最多保留的有效追记数（已发布 + 待审）
+	SupplementMaxPending = 1 // 同一帖子同一时间最多允许的待审追记数
+	SupplementMaxLength  = 500
 )
 
 // 热度计算公式常量

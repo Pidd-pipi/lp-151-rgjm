@@ -18,6 +18,7 @@ func New(
 	tag *handler.TagHandler,
 	like *handler.LikeHandler,
 	admin *handler.AdminHandler,
+	supplement *handler.SupplementHandler,
 	identityMW *middleware.IdentityAuthMiddleware,
 	sensitiveMW *middleware.SensitiveWordMiddleware,
 ) *gin.Engine {
@@ -48,6 +49,7 @@ func New(
 			postGroup.GET("/hot", post.HotPosts)
 			postGroup.GET("/featured", post.FeaturedPosts)
 			postGroup.GET("/:id", post.GetPost)
+			postGroup.POST("/:id/supplements", identityMW.RequireAuth(), supplement.CreateSupplement)
 			postGroup.GET("/:id/comments", comment.ListComments)
 		}
 

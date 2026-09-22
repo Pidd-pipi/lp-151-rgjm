@@ -16,11 +16,12 @@ import (
 type CommentHandler struct {
 	comments service.CommentService
 	likes    service.LikeService
+	posts    service.PostService
 	logger   *slog.Logger
 }
 
-func NewCommentHandler(comments service.CommentService, likes service.LikeService, logger *slog.Logger) *CommentHandler {
-	return &CommentHandler{comments: comments, likes: likes, logger: logger}
+func NewCommentHandler(comments service.CommentService, likes service.LikeService, posts service.PostService, logger *slog.Logger) *CommentHandler {
+	return &CommentHandler{comments: comments, likes: likes, posts: posts, logger: logger}
 }
 
 // CreateComment 发表评论
@@ -76,6 +77,11 @@ func (h *CommentHandler) ListComments(c *gin.Context) {
 		Fail(c, http.StatusInternalServerError, constants.CodeInternal, "list comments failed")
 		return
 	}
+	// 楼主标记：评论作者与帖子作者一致时展示「楼主」
+	var authorID uint
+	if post, err := h.posts.GetByID(postID); err == nil {
+		authorID = post.IdentityID
+	}
 	ids := make([]uint, 0, len(comments))
 	for _, cm := range comments {
 		ids = append(ids, cm.ID)
@@ -88,7 +94,9 @@ func (h *CommentHandler) ListComments(c *gin.Context) {
 	}
 	items := make([]dto.CommentResponse, 0, len(comments))
 	for _, cm := range comments {
-		items = append(items, toCommentResponse(&cm, likedMap[cm.ID]))
+		resp := toCommentResponse(&cm, likedMap[cm.ID])
+		resp.IsOp = authorID > 0 && cm.IdentityID == authorID
+		items = append(items, resp)
 	}
 	OK(c, dto.PageResult{Items: items, Total: total, Page: req.Page, PageSize: req.PageSize})
 }

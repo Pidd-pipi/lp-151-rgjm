@@ -16,13 +16,14 @@ import (
 )
 
 type PostHandler struct {
-	posts  service.PostService
-	likes  service.LikeService
-	logger *slog.Logger
+	posts       service.PostService
+	likes       service.LikeService
+	supplements service.SupplementService
+	logger      *slog.Logger
 }
 
-func NewPostHandler(posts service.PostService, likes service.LikeService, logger *slog.Logger) *PostHandler {
-	return &PostHandler{posts: posts, likes: likes, logger: logger}
+func NewPostHandler(posts service.PostService, likes service.LikeService, supplements service.SupplementService, logger *slog.Logger) *PostHandler {
+	return &PostHandler{posts: posts, likes: likes, supplements: supplements, logger: logger}
 }
 
 // CreatePost 发布帖子
@@ -103,7 +104,23 @@ func (h *PostHandler) GetPost(c *gin.Context) {
 		return
 	}
 	_ = h.posts.IncrementView(id)
-	resp := toPostResponse(post, c.GetUint("identityId") > 0 && h.isLiked(c.GetUint("identityId"), "post", id))
+	viewerID := c.GetUint("identityId")
+	resp := toPostResponse(post, viewerID > 0 && h.isLiked(viewerID, "post", id))
+	resp.IsAuthor = viewerID > 0 && viewerID == post.IdentityID
+	supplements, err := h.supplements.ListForPost(id, viewerID)
+	if err != nil {
+		h.logger.Error("list supplements", "error", err)
+		Fail(c, http.StatusInternalServerError, constants.CodeInternal, "get post failed")
+		return
+	}
+	resp.Supplements = make([]dto.SupplementResponse, 0, len(supplements))
+	for i := range supplements {
+		s := supplements[i]
+		resp.Supplements = append(resp.Supplements, toSupplementResponse(&s, resp.IsAuthor))
+		if s.Status == constants.SupplementStatusPublished {
+			resp.SupplementCount++
+		}
+	}
 	OK(c, resp)
 }
 

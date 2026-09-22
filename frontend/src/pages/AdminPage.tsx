@@ -77,7 +77,9 @@ export default function AdminPage() {
                     <List.Item.Meta
                       title={
                         <Space>
-                          <Tag color={item.targetType === 'post' ? 'blue' : 'purple'}>{item.targetType === 'post' ? '帖子' : '评论'}</Tag>
+                          <Tag color={item.targetType === 'post' ? 'blue' : item.targetType === 'comment' ? 'purple' : 'orange'}>
+                            {item.targetType === 'post' ? '帖子' : item.targetType === 'comment' ? '评论' : '追记'}
+                          </Tag>
                           <Tag color="red">{item.hitWords || '敏感词'}</Tag>
                           <Typography.Text type="secondary">状态: {item.status === 1 ? '待审核' : item.status === 2 ? '已放行' : '已屏蔽'}</Typography.Text>
                         </Space>
