@@ -16,13 +16,14 @@ import (
 )
 
 type PostHandler struct {
-	posts  service.PostService
-	likes  service.LikeService
-	logger *slog.Logger
+	posts   service.PostService
+	addenda service.PostAddendumService
+	likes   service.LikeService
+	logger  *slog.Logger
 }
 
-func NewPostHandler(posts service.PostService, likes service.LikeService, logger *slog.Logger) *PostHandler {
-	return &PostHandler{posts: posts, likes: likes, logger: logger}
+func NewPostHandler(posts service.PostService, addenda service.PostAddendumService, likes service.LikeService, logger *slog.Logger) *PostHandler {
+	return &PostHandler{posts: posts, addenda: addenda, likes: likes, logger: logger}
 }
 
 // CreatePost 发布帖子
@@ -103,7 +104,27 @@ func (h *PostHandler) GetPost(c *gin.Context) {
 		return
 	}
 	_ = h.posts.IncrementView(id)
-	resp := toPostResponse(post, c.GetUint("identityId") > 0 && h.isLiked(c.GetUint("identityId"), "post", id))
+	viewerID := c.GetUint("identityId")
+	resp := toPostResponse(post, viewerID > 0 && h.isLiked(viewerID, "post", id))
+	resp.IsOwner = viewerID > 0 && post.IdentityID == viewerID
+	// 详情页展示楼主追记：已通过的追记对所有人公开；
+	// 待审/驳回状态与驳回原因只对作者本人返回。追记数量仅统计已公开发布的条数。
+	views, err := h.addenda.ListByPostID(id, viewerID)
+	if err != nil {
+		h.logger.Error("list addenda", "postId", id, "error", err)
+		Fail(c, http.StatusInternalServerError, constants.CodeInternal, "get post failed")
+		return
+	}
+	resp.Addenda = make([]dto.AddendumResponse, 0, len(views))
+	for _, v := range views {
+		if v.Addendum.Status != constants.AddendumStatusPublished && !v.IsOwner {
+			continue
+		}
+		if v.Addendum.Status == constants.AddendumStatusPublished {
+			resp.AddendumCount++
+		}
+		resp.Addenda = append(resp.Addenda, toAddendumResponse(v))
+	}
 	OK(c, resp)
 }
 
@@ -193,6 +214,7 @@ func toPostResponse(post *model.Post, liked bool) dto.PostResponse {
 	for _, tag := range post.Tags {
 		resp.Tags = append(resp.Tags, dto.TagResponse{ID: tag.ID, Name: tag.Name, PostCount: tag.PostCount})
 	}
+	resp.Addenda = make([]dto.AddendumResponse, 0)
 	return resp
 }
 

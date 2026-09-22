@@ -57,32 +57,35 @@ func main() {
 	likeRepo := repository.NewLikeRepository(db)
 	sensitiveRepo := repository.NewSensitiveWordRepository(db)
 	reviewRepo := repository.NewReviewQueueRepository(db)
+	addendumRepo := repository.NewPostAddendumRepository(db)
 
 	// Services
 	tokenService := service.NewTokenService(cfg.JWTSecret, cfg.JWTExpireMin)
 	identityService := service.NewIdentityService(identityRepo, tokenService, logger)
 	tagService := service.NewTagService(tagRepo)
 	sensitiveService := service.NewSensitiveWordService(sensitiveRepo)
-	reviewService := service.NewReviewService(reviewRepo, postRepo, commentRepo, logger)
+	reviewService := service.NewReviewService(reviewRepo, postRepo, commentRepo, addendumRepo, logger)
 	postService := service.NewPostService(postRepo, tagService, sensitiveService, reviewService, logger)
 	commentService := service.NewCommentService(commentRepo, postRepo, sensitiveService, reviewService, logger)
+	addendumService := service.NewPostAddendumService(addendumRepo, postRepo, sensitiveService, reviewService, logger)
 	likeService := service.NewLikeService(likeRepo, postRepo, commentRepo, logger)
 	_ = service.NewHeatService(postRepo, logger)
 	_ = service.NewCacheService(redisClient)
 
 	// Handlers
 	authHandler := handler.NewAuthHandler(identityService, logger)
-	postHandler := handler.NewPostHandler(postService, likeService, logger)
+	postHandler := handler.NewPostHandler(postService, addendumService, likeService, logger)
 	commentHandler := handler.NewCommentHandler(commentService, likeService, logger)
 	tagHandler := handler.NewTagHandler(tagService, logger)
 	likeHandler := handler.NewLikeHandler(likeService, logger)
 	adminHandler := handler.NewAdminHandler(reviewService, postService, sensitiveService, tagService, logger)
+	addendumHandler := handler.NewAddendumHandler(addendumService, logger)
 
 	// Middleware
 	identityMW := middleware.NewIdentityAuthMiddleware(tokenService)
 	sensitiveMW := middleware.NewSensitiveWordMiddleware(sensitiveService, logger)
 
-	engine := router.New(logger, authHandler, postHandler, commentHandler, tagHandler, likeHandler, adminHandler, identityMW, sensitiveMW)
+	engine := router.New(logger, authHandler, postHandler, commentHandler, tagHandler, likeHandler, adminHandler, addendumHandler, identityMW, sensitiveMW)
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.BackendPort,

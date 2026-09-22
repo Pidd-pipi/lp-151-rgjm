@@ -10,5 +10,6 @@ func AllModels() []any {
 		&Like{},
 		&SensitiveWord{},
 		&ReviewQueue{},
+		&PostAddendum{},
 	}
 }

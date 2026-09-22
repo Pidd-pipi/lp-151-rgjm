@@ -28,6 +28,20 @@ export interface Post {
   liked: boolean
   tags: Tag[]
   createdAt: string
+  isOwner: boolean
+  addendumCount: number
+  addenda?: Addendum[]
+}
+
+export interface Addendum {
+  id: number
+  postId: number
+  content: string
+  status: number // 1 已发布 2 待审核 3 已驳回
+  hitWords?: string
+  reviewNote?: string
+  createdAt: string
+  reviewedAt?: string
 }
 
 export interface Comment {

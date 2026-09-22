@@ -5,6 +5,12 @@ info:
   description: 匿名发帖/评论、话题标签、点赞热度、每日精选、敏感词审核
 servers:
   - url: http://localhost:19401
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
 paths:
   /healthz:
     get:
@@ -90,6 +96,9 @@ paths:
   /api/v1/posts/{id}:
     get:
       summary: 帖子详情
+      description: >
+        返回楼主标记 isOwner、已通过追记数量 addendumCount 与追记数组 addenda。
+        待审核/已驳回追记及其驳回原因仅在请求者为作者本人时返回，其他访问者只能看到已通过追记。
       parameters:
         - in: path
           name: id
@@ -97,7 +106,7 @@ paths:
           schema: { type: integer }
       responses:
         '200':
-          description: 帖子详情
+          description: 帖子详情（含楼主追记）
   /api/v1/posts/{id}/comments:
     get:
       summary: 帖子评论列表
@@ -115,6 +124,57 @@ paths:
       responses:
         '200':
           description: 分页评论列表
+  /api/v1/posts/{id}/addenda:
+    post:
+      summary: 楼主追加补充说明（最多两条，不可修改，每条≤500字）
+      description: >
+        仅帖子作者可调用。命中敏感词的追记进入审核队列（status=2），原帖与已通过追记保持公开；
+        同一帖子已存在待审追记或两条名额已满时整次拒绝（HTTP 409）。
+        追记被管理员驳回后不占名额，作者可另写一条，驳回原因仅作者本人可见。
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string, minLength: 1, maxLength: 500 }
+      responses:
+        '200':
+          description: 追记创建结果，blocked=true 表示进入审核
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer }
+                  message: { type: string }
+                  data:
+                    type: object
+                    properties:
+                      blocked: { type: boolean }
+                      hitWords: { type: array, items: { type: string } }
+                      addendum:
+                        type: object
+                        properties:
+                          id: { type: integer }
+                          postId: { type: integer }
+                          content: { type: string }
+                          status: { type: integer, description: '1已发布 2待审核 3已驳回' }
+                          createdAt: { type: string, format: date-time }
+        '400': { description: 内容为空或超过500字 }
+        '401': { description: 未登录 }
+        '403': { description: 非帖子作者 }
+        '404': { description: 帖子不存在 }
+        '409': { description: 已有待审追记或两条名额已满 }
   /api/v1/comments:
     post:
       summary: 发表评论

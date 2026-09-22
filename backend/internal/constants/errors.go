@@ -24,6 +24,15 @@ const (
 	ReviewStatusPending  = 1
 	ReviewStatusApproved = 2
 	ReviewStatusRejected = 3
+
+	// 楼主追记状态：1 已发布（公开）2 待审核 3 已驳回
+	AddendumStatusPublished = 1
+	AddendumStatusPending   = 2
+	AddendumStatusRejected  = 3
+
+	// 楼主追记条数上限
+	AddendumMaxPerPost = 2
+	AddendumMaxLength  = 500
 )
 
 // 热度计算公式常量
